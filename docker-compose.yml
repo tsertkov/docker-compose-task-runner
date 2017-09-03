@@ -1,0 +1,11 @@
+version: "2"
+volumes:
+  mysql:
+services:
+  mysql:
+    image: mariadb
+    restart: unless-stopped
+    volumes:
+      - mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"

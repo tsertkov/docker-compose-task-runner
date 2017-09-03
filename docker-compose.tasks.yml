@@ -1,0 +1,15 @@
+version: "2"
+services:
+  task_runner:
+    depends_on:
+      - mysql
+    image:
+      imega/mysql-client
+    volumes:
+      - .:/app/
+    working_dir: /app
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      DB_NAME: "${SERVICE_DB_NAME}"
+      DB_USER: "${SERVICE_DB_USER}"
+      DB_PASSWORD: "${SERVICE_DB_PASSWORD}"
