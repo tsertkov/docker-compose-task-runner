@@ -6,6 +6,7 @@ $ ./run-task
 $ ./run-task sh
 $ ./run-task db-init
 $ ./run-task db-restore
+$ ./run-task db-migrate
 $ ./run-task db-backup
 $ docker-compose down --volumes
 ```
