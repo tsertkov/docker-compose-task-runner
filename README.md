@@ -4,6 +4,7 @@
 $ docker-compose up -d
 $ ./run-task
 $ ./run-task sh
+$ ./run-task sh -c 'bash'
 $ ./run-task db-init
 $ ./run-task db-restore
 $ ./run-task db-migrate
