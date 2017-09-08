@@ -5,12 +5,12 @@ TASKS_DIR="tasks"
 if [ $# -eq 0 ]; then
   echo "Usage: $(basename "$0") <TASK> [ARGS...]"
   echo "Available tasks:"
-  echo "  sh"
+  echo "  bash"
   echo "$(ls "$TASKS_DIR")" | sed 's/^/  /'
   exit 1
 fi
 
-if [ "$1" == "sh" ]; then
+if [ "$1" == "bash" ]; then
   TASK="/usr/bin/env $@"
 else
   TASK="${TASKS_DIR}/$@"
