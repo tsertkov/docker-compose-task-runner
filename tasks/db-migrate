@@ -1,0 +1,162 @@
+#!/usr/bin/env php
+<?php
+
+$options = [
+  blogIds => ['1', '8', '9'],
+  wordpressDir => './wordpress/html',
+  from => 'foo.example.com',
+  to => 'bar.example.com',
+  fromBucket => 'foo-bucket',
+  toBucket => 'bar-bucket',
+  postGuidFilter => 'http://foo.example.com/%'
+];
+
+///////////////////////////////////////////////////////////////////////////////
+
+ini_set('error_reporting', E_ALL);
+ini_set('log_errors', 'On');
+
+$config = wp_config("${options['wordpressDir']}/wp-config.php", [
+  'DB_NAME',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_HOST'
+]);
+
+$db = new PDO(
+  "mysql:dbname=${config['DB_NAME']};host=${config['DB_HOST']}",
+  $config['DB_USER'],
+  $config['DB_PASSWORD']
+);
+
+$results = [];
+foreach ($options['blogIds'] as $blogId) {
+  if ($blogId === '1') {
+    $postmetaTable = 'wp_postmeta';
+    $postsTable = 'wp_posts';
+  } else {
+    $postmetaTable = "wp_${blogId}_postmeta";
+    $postsTable = "wp_${blogId}_posts";
+  }
+
+  echo "Migrating blogId: '${blogId}'", PHP_EOL;
+  printBlogMigrationResults([
+    'Postmata' => migrate_postmeta($db, $postmetaTable, $options),
+    'Posts' => migrate_posts($db, $postsTable, $options)
+  ]);
+  echo '---', PHP_EOL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+function migrate_postmeta($db, $table, $options) {
+  $sql = "
+    select
+      meta_id,
+      meta_value
+    from
+      `${table}`
+    where
+      meta_value LIKE :valueFilter
+    ;
+  ";
+
+  $metaValueFiler = 'a:%';
+
+  $stmt = $db->prepare($sql);
+  $stmt->bindValue(':valueFilter', $metaValueFiler);
+  $stmt->execute();
+
+  $affected_rows = 0;
+
+  while (list($meta_id, $meta_value) = $stmt->fetch(PDO::FETCH_NUM)) {
+    $meta_value = @unserialize($meta_value);
+    if (!$meta_value) continue;
+
+    $updated = false;
+    $meta_value = map_postmeta($meta_value, $updated, $options);
+
+    if (!$updated) continue;
+
+    $meta_value = serialize($meta_value);
+    $sql = "
+      UPDATE
+        `${table}`
+      SET
+        meta_value = :metaValue
+      WHERE
+        meta_id = :metaId
+    ";
+
+    $affected_rows += $db
+      ->prepare($sql)
+      ->execute(array(
+        ':metaValue' => $meta_value,
+        ':metaId' => $meta_id
+      ));
+  }
+
+  return $affected_rows;
+}
+
+function map_postmeta($meta, &$updated, $options) {
+  if (
+    array_key_exists('bucket', $meta)
+    && $meta['bucket'] === $options['fromBucket']
+  ) {
+    $meta['bucket'] = $options['toBucket'];
+    $updated = true;
+  }
+
+  return $meta;
+}
+
+function migrate_posts($db, $table, $options) {
+  $sql = "
+    UPDATE
+      `${table}`
+    SET
+      guid = replace(guid, :from, :to)
+    WHERE
+      guid LIKE :guidFilter
+  ";
+
+  $from = "//${options['from']}/";
+  $to = "//${options['to']}/";
+  $guidFilter = "http://${options['from']}/%";
+
+  return $db
+    ->prepare($sql)
+    ->execute(array(
+      ':from' => $from,
+      ':to' => $to,
+      ':guidFilter' => $guidFilter
+    ));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+function printBlogMigrationResults($results) {
+  foreach ($results as $title => $result) {
+    $result_str = $result === 0 ? 'Nothing to update' : 'Updated: ' . $result;
+    echo $title, ': ', PHP_EOL, '˪', $result_str, PHP_EOL;
+  }
+}
+
+function wp_config($config_path, array $constants) {
+  preg_match_all(
+    '/^\s*define\([\s\'"]+(.+)[\s\'"]+,[\s\'"]+(.+)[\s\'"]+\);\s*$/m',
+    file_get_contents($config_path),
+    $constantsMatch,
+    PREG_SET_ORDER
+  );
+
+  $config = [];
+  foreach ($constantsMatch as $constantMeta) {
+    list(, $name, $value) = $constantMeta;
+    if (!in_array($name, $constants)) continue;
+    $config[$name] = $value;
+  }
+
+  return $config;
+}
