@@ -1,14 +1,18 @@
-# Task runner for docker-compose based project
+# Docker-compose task runner
+
+> Approach for executing scripts in `docker-compose` managed environment.
 
 ## Overview
 
-Task runner for running scripts inside `docker-compose` managed environment. Services are defined in `docker-compose.yml` file and task runner services in `docker-compose.tasks.yml`.
+Regular services are defined in `docker-compose.yml` file and task runner services in `docker-compose.tasks.yml`.
+
+Tasks
 
 ```
 $ docker-compose up -d
 $ ./run-task
-$ ./run-task sh
-$ ./run-task sh -c 'bash'
+$ ./run-task bash
+$ ./run-task bash -c 'top'
 $ ./run-task db-init
 $ ./run-task db-restore
 $ ./run-task db-migrate
