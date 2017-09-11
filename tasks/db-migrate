@@ -11,7 +11,7 @@ migrate([
   'fromBucket' => 'foo-bucket',
   'toBucket' => 'bar-bucket',
   'postGuidFilter' => 'http://foo.example.com/%',
-  'dbConfig' => getWpConfig('.wordpress/html/wp-config.php', [
+  'dbConfig' => getWpConfig('wordpress/html/wp-config.php', [
     'DB_NAME',
     'DB_USER',
     'DB_PASSWORD',
